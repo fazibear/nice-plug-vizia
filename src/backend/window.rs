@@ -24,7 +24,7 @@ use super::application::ApplicationRunner;
 /// `RefCell`.
 pub(crate) struct ViziaWindowHandle {
     application: RefCell<ApplicationRunner>,
-    on_idle: Option<Box<dyn Fn(&mut Context) + Send>>,
+    on_idle: Option<Box<dyn Fn(&mut Context, bool) + Send>>,
 }
 
 impl ViziaWindowHandle {
@@ -37,7 +37,7 @@ impl ViziaWindowHandle {
         win_desc: WindowDescription,
         window: WindowContext,
         builder: Option<Box<dyn FnOnce(&mut Context) + Send>>,
-        on_idle: Option<Box<dyn Fn(&mut Context) + Send>>,
+        on_idle: Option<Box<dyn Fn(&mut Context, bool) + Send>>,
         is_parented: bool,
     ) -> Result<ViziaWindowHandle, baseview::HandlerError> {
         // Reactive runtime setup — mirrors what `vizia_winit::Application::new`
@@ -77,7 +77,6 @@ impl ViziaWindowHandle {
             .ok_or_else(|| {
                 baseview::HandlerError::from_boxed("Could not create skia direct context".into())
             })?;
-        gr_context.set_resource_cache_limit(win_desc.skia_resource_cache_limit);
 
         let fb_info = {
             let mut fboid: GLint = 0;

@@ -3,7 +3,6 @@
 use nice_plug_core::params::Param;
 use nice_plug_core::params::internals::ParamPtr;
 use vizia::prelude::*;
-use keyboard_types::NamedKey;
 
 use super::param_base::ParamWidgetBase;
 use super::util::{self, ModifiersExt};
@@ -523,7 +522,7 @@ impl View for ParamSlider {
                     }
                 }
             }
-            WindowEvent::KeyUp(_, Some(Key::Named(NamedKey::Shift))) => {
+            WindowEvent::KeyUp(_, Some(Key::Shift)) => {
                 // If this happens mid-drag, snap back to the current screen position.
                 if self.drag_active && self.granular_drag_status.is_some() {
                     self.granular_drag_status = None;

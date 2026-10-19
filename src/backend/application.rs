@@ -67,71 +67,16 @@ impl ApplicationRunner {
         }
     }
 
-    /// Apply a new user scale factor: resize the embedded window, update
-    /// vizia's tracked DPI factor + root viewport bounds, and recreate the
-    /// skia render surfaces at the new physical size.
-    fn apply_user_scale(&mut self, new_user_scale: f64) {
-        self.window_description.user_scale_factor = new_user_scale;
-
-        // baseview treats the user scale factor as part of its logical size.
-        let base_logical_w = self.window_description.inner_size.width as f64;
-        let base_logical_h = self.window_description.inner_size.height as f64;
-        let scaled_logical_w = base_logical_w * new_user_scale;
-        let scaled_logical_h = base_logical_h * new_user_scale;
-        let _ = self
-            .window_context
-            .resize(baseview::dpi::LogicalSize::new(scaled_logical_w, scaled_logical_h));
-
-        let new_dpi_factor = self.window_scale_factor * new_user_scale;
-        self.cx.set_scale_factor(new_dpi_factor);
-
-        let new_physical_w = (scaled_logical_w * self.window_scale_factor) as f32;
-        let new_physical_h = (scaled_logical_h * self.window_scale_factor) as f32;
-        self.cx.set_window_size(Entity::root(), new_physical_w, new_physical_h);
-
-        if new_physical_w > 0.0 && new_physical_h > 0.0 {
-            let fb_info = {
-                let mut fboid: GLint = 0;
-                // SAFETY: the GL context is current (the frame loop calls us).
-                unsafe { gl::GetIntegerv(gl::FRAMEBUFFER_BINDING, &mut fboid) };
-
-                FramebufferInfo {
-                    fboid: fboid.try_into().unwrap(),
-                    format: skia_safe::gpu::gl::Format::RGBA8.into(),
-                    ..Default::default()
-                }
-            };
-
-            self.surface = create_surface(
-                (new_physical_w as i32, new_physical_h as i32),
-                fb_info,
-                &mut self.gr_context,
-            );
-
-            self.dirty_surface = self
-                .surface
-                .new_surface_with_dimensions((
-                    new_physical_w.max(1.0) as i32,
-                    new_physical_h.max(1.0) as i32,
-                ))
-                .unwrap();
-        }
-
-        self.cx.needs_refresh(Entity::root());
-    }
-
     /// Handle all reactivity within a frame.
     pub fn on_frame_update(&mut self) {
         // Pick up effects enqueued by off-UI-thread `SyncSignal` writes.
         Runtime::drain_pending_work();
 
         while let Some(event) = queue_get() {
-            self.cx.send_event(event.into_event());
+            self.cx.send_event(event);
         }
 
-        // Events. The flush callback can't borrow `&mut self`, so size / scale
-        // change requests get latched into locals here and applied afterwards.
-        let mut pending_user_scale: Option<f64> = None;
+        // Forward window requests supported by Vizia 0.4.
         self.event_manager.flush_events(self.cx.context(), |window_event| {
             match window_event {
                 WindowEvent::FocusIn => {
@@ -140,16 +85,9 @@ impl ApplicationRunner {
                         let _ = self.window_context.focus();
                     }
                 }
-                WindowEvent::SetUserScale(factor) => {
-                    pending_user_scale = Some(*factor);
-                }
                 _ => {}
             }
         });
-
-        if let Some(new_user_scale) = pending_user_scale {
-            self.apply_user_scale(new_user_scale);
-        }
 
         // We need to resize the window to make sure the new size is applied.
         // This is a workaround for the fact that baseview does not resize the
@@ -284,7 +222,18 @@ impl ApplicationRunner {
                     KeyState::Up => false,
                 };
 
-                match event.code {
+                // baseview uses keyboard-types 0.8; Vizia 0.4 uses 0.7.
+                // Translate their shared W3C names, preserving character keys
+                // directly and falling back for names unknown to Vizia.
+                let code = event.code.to_string().parse().unwrap_or(Code::Unidentified);
+                let key = match event.key {
+                    keyboard_types::Key::Character(text) => Key::Character(text),
+                    keyboard_types::Key::Named(named) => {
+                        named.to_string().parse().unwrap_or(Key::Unidentified)
+                    }
+                };
+
+                match code {
                     Code::ShiftLeft | Code::ShiftRight => {
                         self.cx.modifiers().set(Modifiers::SHIFT, pressed)
                     }
@@ -301,15 +250,15 @@ impl ApplicationRunner {
                 }
 
                 if pressed {
-                    if let Key::Character(written) = &event.key {
+                    if let Key::Character(written) = &key {
                         for chr in written.chars() {
                             self.cx.emit_origin(WindowEvent::CharInput(chr));
                         }
                     }
 
-                    self.cx.emit_origin(WindowEvent::KeyDown(event.code, Some(event.key)));
+                    self.cx.emit_origin(WindowEvent::KeyDown(code, Some(key)));
                 } else {
-                    self.cx.emit_origin(WindowEvent::KeyUp(event.code, Some(event.key)));
+                    self.cx.emit_origin(WindowEvent::KeyUp(code, Some(key)));
                 }
             }
             BaseviewEvent::Window(event) => match event {
@@ -366,10 +315,11 @@ impl ApplicationRunner {
         self.cx.needs_refresh(Entity::root());
     }
 
-    pub fn handle_idle(&mut self, on_idle: &Option<Box<dyn Fn(&mut Context) + Send>>) {
+    pub fn handle_idle(&mut self, on_idle: &Option<Box<dyn Fn(&mut Context, bool) + Send>>) {
         if let Some(idle_callback) = on_idle {
             self.cx.set_current(Entity::root());
-            (idle_callback)(self.cx.context());
+            let text_focused = self.cx.focused_element() == Some("textbox");
+            (idle_callback)(self.cx.context(), text_focused);
         }
     }
 
@@ -393,7 +343,7 @@ pub fn requests_exit(
         BaseviewEvent::Window(baseview::WindowEvent::WillClose) => true,
         #[cfg(target_os = "macos")]
         BaseviewEvent::Keyboard(event) if !is_parented => {
-            if event.code == Code::KeyQ
+            if event.code == keyboard_types::Code::KeyQ
                 && event.modifiers == InputModifiers::META
                 && event.state == KeyState::Down
             {

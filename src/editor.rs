@@ -10,7 +10,6 @@ use nice_plug_core::editor::{
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use keyboard_types::NamedKey;
 use vizia::prelude::*;
 use vizia::views::TextEvent;
 
@@ -105,7 +104,7 @@ impl Editor for ViziaEditor {
         // Runs every frame on the GUI thread after events have been handled:
         // emits `ParametersChanged` when the host reported a value change, and
         // drains keys queued by the host-thread virtual-key callback.
-        let on_idle: Box<dyn Fn(&mut Context) + Send> = Box::new(move |cx| {
+        let on_idle: Box<dyn Fn(&mut Context, bool) + Send> = Box::new(move |cx, text_focused| {
             if emit_parameters_changed_event
                 .compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed)
                 .is_ok()
@@ -120,7 +119,7 @@ impl Editor for ViziaEditor {
             // decide synchronously whether to claim a key.
             key_inject
                 .text_focused
-                .store(cx.focused_element() == Some("textbox"), Ordering::Release);
+                .store(text_focused, Ordering::Release);
 
             let drained: Vec<KeyInject> = {
                 let mut q = key_inject.pending.lock().unwrap_or_else(|e| e.into_inner());
@@ -368,43 +367,43 @@ impl EditorHandle for ViziaEditorHandle {
             VirtualKeyCode::Equals => Some(KeyInject::Char('=')),
 
             VirtualKeyCode::Backspace => {
-                Some(KeyInject::ControlKey(Code::Backspace, Key::Named(NamedKey::Backspace)))
+                Some(KeyInject::ControlKey(Code::Backspace, Key::Backspace))
             }
-            VirtualKeyCode::Tab => Some(KeyInject::ControlKey(Code::Tab, Key::Named(NamedKey::Tab))),
-            VirtualKeyCode::Return => Some(KeyInject::ControlKey(Code::Enter, Key::Named(NamedKey::Enter))),
+            VirtualKeyCode::Tab => Some(KeyInject::ControlKey(Code::Tab, Key::Tab)),
+            VirtualKeyCode::Return => Some(KeyInject::ControlKey(Code::Enter, Key::Enter)),
             VirtualKeyCode::NumpadEnter => {
-                Some(KeyInject::ControlKey(Code::NumpadEnter, Key::Named(NamedKey::Enter)))
+                Some(KeyInject::ControlKey(Code::NumpadEnter, Key::Enter))
             }
-            VirtualKeyCode::Pause => Some(KeyInject::ControlKey(Code::Pause, Key::Named(NamedKey::Pause))),
-            VirtualKeyCode::Escape => Some(KeyInject::ControlKey(Code::Escape, Key::Named(NamedKey::Escape))),
-            VirtualKeyCode::End => Some(KeyInject::ControlKey(Code::End, Key::Named(NamedKey::End))),
-            VirtualKeyCode::Home => Some(KeyInject::ControlKey(Code::Home, Key::Named(NamedKey::Home))),
+            VirtualKeyCode::Pause => Some(KeyInject::ControlKey(Code::Pause, Key::Pause)),
+            VirtualKeyCode::Escape => Some(KeyInject::ControlKey(Code::Escape, Key::Escape)),
+            VirtualKeyCode::End => Some(KeyInject::ControlKey(Code::End, Key::End)),
+            VirtualKeyCode::Home => Some(KeyInject::ControlKey(Code::Home, Key::Home)),
             VirtualKeyCode::ArrowLeft => {
-                Some(KeyInject::ControlKey(Code::ArrowLeft, Key::Named(NamedKey::ArrowLeft)))
+                Some(KeyInject::ControlKey(Code::ArrowLeft, Key::ArrowLeft))
             }
-            VirtualKeyCode::ArrowUp => Some(KeyInject::ControlKey(Code::ArrowUp, Key::Named(NamedKey::ArrowUp))),
+            VirtualKeyCode::ArrowUp => Some(KeyInject::ControlKey(Code::ArrowUp, Key::ArrowUp)),
             VirtualKeyCode::ArrowRight => {
-                Some(KeyInject::ControlKey(Code::ArrowRight, Key::Named(NamedKey::ArrowRight)))
+                Some(KeyInject::ControlKey(Code::ArrowRight, Key::ArrowRight))
             }
             VirtualKeyCode::ArrowDown => {
-                Some(KeyInject::ControlKey(Code::ArrowDown, Key::Named(NamedKey::ArrowDown)))
+                Some(KeyInject::ControlKey(Code::ArrowDown, Key::ArrowDown))
             }
-            VirtualKeyCode::PageUp => Some(KeyInject::ControlKey(Code::PageUp, Key::Named(NamedKey::PageUp))),
-            VirtualKeyCode::PageDown => Some(KeyInject::ControlKey(Code::PageDown, Key::Named(NamedKey::PageDown))),
-            VirtualKeyCode::Insert => Some(KeyInject::ControlKey(Code::Insert, Key::Named(NamedKey::Insert))),
-            VirtualKeyCode::Delete => Some(KeyInject::ControlKey(Code::Delete, Key::Named(NamedKey::Delete))),
-            VirtualKeyCode::F1 => Some(KeyInject::ControlKey(Code::F1, Key::Named(NamedKey::F1))),
-            VirtualKeyCode::F2 => Some(KeyInject::ControlKey(Code::F2, Key::Named(NamedKey::F2))),
-            VirtualKeyCode::F3 => Some(KeyInject::ControlKey(Code::F3, Key::Named(NamedKey::F3))),
-            VirtualKeyCode::F4 => Some(KeyInject::ControlKey(Code::F4, Key::Named(NamedKey::F4))),
-            VirtualKeyCode::F5 => Some(KeyInject::ControlKey(Code::F5, Key::Named(NamedKey::F5))),
-            VirtualKeyCode::F6 => Some(KeyInject::ControlKey(Code::F6, Key::Named(NamedKey::F6))),
-            VirtualKeyCode::F7 => Some(KeyInject::ControlKey(Code::F7, Key::Named(NamedKey::F7))),
-            VirtualKeyCode::F8 => Some(KeyInject::ControlKey(Code::F8, Key::Named(NamedKey::F8))),
-            VirtualKeyCode::F9 => Some(KeyInject::ControlKey(Code::F9, Key::Named(NamedKey::F9))),
-            VirtualKeyCode::F10 => Some(KeyInject::ControlKey(Code::F10, Key::Named(NamedKey::F10))),
-            VirtualKeyCode::F11 => Some(KeyInject::ControlKey(Code::F11, Key::Named(NamedKey::F11))),
-            VirtualKeyCode::F12 => Some(KeyInject::ControlKey(Code::F12, Key::Named(NamedKey::F12))),
+            VirtualKeyCode::PageUp => Some(KeyInject::ControlKey(Code::PageUp, Key::PageUp)),
+            VirtualKeyCode::PageDown => Some(KeyInject::ControlKey(Code::PageDown, Key::PageDown)),
+            VirtualKeyCode::Insert => Some(KeyInject::ControlKey(Code::Insert, Key::Insert)),
+            VirtualKeyCode::Delete => Some(KeyInject::ControlKey(Code::Delete, Key::Delete)),
+            VirtualKeyCode::F1 => Some(KeyInject::ControlKey(Code::F1, Key::F1)),
+            VirtualKeyCode::F2 => Some(KeyInject::ControlKey(Code::F2, Key::F2)),
+            VirtualKeyCode::F3 => Some(KeyInject::ControlKey(Code::F3, Key::F3)),
+            VirtualKeyCode::F4 => Some(KeyInject::ControlKey(Code::F4, Key::F4)),
+            VirtualKeyCode::F5 => Some(KeyInject::ControlKey(Code::F5, Key::F5)),
+            VirtualKeyCode::F6 => Some(KeyInject::ControlKey(Code::F6, Key::F6)),
+            VirtualKeyCode::F7 => Some(KeyInject::ControlKey(Code::F7, Key::F7)),
+            VirtualKeyCode::F8 => Some(KeyInject::ControlKey(Code::F8, Key::F8)),
+            VirtualKeyCode::F9 => Some(KeyInject::ControlKey(Code::F9, Key::F9)),
+            VirtualKeyCode::F10 => Some(KeyInject::ControlKey(Code::F10, Key::F10)),
+            VirtualKeyCode::F11 => Some(KeyInject::ControlKey(Code::F11, Key::F11)),
+            VirtualKeyCode::F12 => Some(KeyInject::ControlKey(Code::F12, Key::F12)),
 
             _ => None,
         };

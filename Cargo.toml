@@ -15,36 +15,17 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 nice-plug-core = "0.4.2"
 
-# vizia WITHOUT its `baseview` feature: the windowing + rendering backend is
-# merged into this crate (see `src/backend/`) and driven by the main
-# published `baseview` crate directly, so that `EditorHandle::Window` can be a
-# `baseview::Window` and expose the window-control API nice-plug needs.
-vizia = { git = "https://github.com/vizia/vizia", default-features = false }
-vizia_core = { git = "https://github.com/vizia/vizia" }
-vizia_input = { git = "https://github.com/vizia/vizia" }
-vizia_reactive = { git = "https://github.com/vizia/vizia" }
+vizia = "0.4"
+vizia_core = "0.4"
+vizia_input = "0.4"
+vizia_reactive = "0.4"
 
 baseview = { version = "0.4", features = ["opengl"] }
-skia-safe = { version = "0.99", features = ["gl"] }
+skia-safe = { version = "^0.93.1", features = ["gl"] }
 gl = { version = "0.14" }
 raw-window-handle = "0.6"
 keyboard-types = "0.8"
 
 crossbeam = "0.8"
-# Used by `ParamRegistry` for its signal map — flushing happens from the host /
-# audio thread, and `parking_lot::Mutex` avoids the priority-inversion and
-# poisoning overhead of `std::sync::Mutex` if the UI thread happens to hold the
-# lock during widget construction when a parameter change arrives.
 parking_lot = "0.12"
-# To make the state persistable
 serde = { version = "1.0", features = ["derive"] }
-
-
-# [profile.release]
-# lto = "thin"
-# strip = "symbols"
-
-# [profile.profiling]
-# inherits = "release"
-# debug = true
-# strip = "none"
