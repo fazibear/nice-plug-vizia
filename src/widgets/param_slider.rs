@@ -167,6 +167,7 @@ impl ParamSlider {
                                     label_override,
                                 );
                             })
+                            .size(Stretch(1.0))
                             .hoverable(false);
                         }
                     });

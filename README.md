@@ -12,6 +12,10 @@ Unlike the upstream `vizia_baseview` (which is coupled to baseview 0.2.x and a g
 - Drives vizia from the **main published [`baseview`](https://crates.io/crates/baseview) 0.4.x** directly, so `EditorHandle::Window` is a real `baseview::Window` exposing the window-control API nice-plug needs.
 - Uses **vizia without its `baseview` feature**; the `ViziaEditor` is type-erased (a concrete, non-generic `Plugin::Editor`).
 
+## Slider layout compatibility
+
+The newer Vizia revision sets `ZStack` to `size: auto` by default. `ParamSlider` explicitly applies `.size(Stretch(1.0))` to its inner `ZStack` so the value label and fill bar occupy the slider's bounds. Without this, the inner content can collapse to zero size while the outer slider still responds to hover. This accommodates a Vizia theme change, rather than a baseview backend change.
+
 ## Building Examples
 
 ```
