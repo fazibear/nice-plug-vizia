@@ -19,10 +19,10 @@ nice-plug-core = "0.4.2"
 # merged into this crate (see `src/backend/`) and driven by the main
 # published `baseview` crate directly, so that `EditorHandle::Window` can be a
 # `baseview::Window` and expose the window-control API nice-plug needs.
-vizia = { git = "https://github.com/vizia/vizia", rev = "426d2e7b8533d485e78ab7f07f9f81d8324c256d", default-features = false }
-vizia_core = { git = "https://github.com/vizia/vizia", rev = "426d2e7b8533d485e78ab7f07f9f81d8324c256d" }
-vizia_input = { git = "https://github.com/vizia/vizia", rev = "426d2e7b8533d485e78ab7f07f9f81d8324c256d" }
-vizia_reactive = { git = "https://github.com/vizia/vizia", rev = "426d2e7b8533d485e78ab7f07f9f81d8324c256d" }
+vizia = { git = "https://github.com/vizia/vizia", default-features = false }
+vizia_core = { git = "https://github.com/vizia/vizia" }
+vizia_input = { git = "https://github.com/vizia/vizia" }
+vizia_reactive = { git = "https://github.com/vizia/vizia" }
 
 baseview = { version = "0.4", features = ["opengl"] }
 skia-safe = { version = "0.99", features = ["gl"] }
