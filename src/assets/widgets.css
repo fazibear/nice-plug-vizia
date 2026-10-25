@@ -65,6 +65,15 @@ param-button.bypass:checked {
   transition: background-color 100ms;
 }
 
+param-knob {
+  width: 80px;
+  height: 80px;
+}
+
+param-knob .value-entry {
+  alignment: center;
+}
+
 param-slider {
   height: 30px;
   width: 180px;

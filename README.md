@@ -16,6 +16,31 @@ Unlike the upstream `vizia_baseview` (which is coupled to baseview 0.2.x and a g
 
 The newer Vizia revision sets `ZStack` to `size: auto` by default. `ParamSlider` explicitly applies `.size(Stretch(1.0))` to its inner `ZStack` so the value label and fill bar occupy the slider's bounds. Without this, the inner content can collapse to zero size while the outer slider still responds to hover. This accommodates a Vizia theme change, rather than a baseview backend change.
 
+## Parameter knobs
+
+`widgets::ParamKnob` binds a rotary control directly to a nice-plug parameter:
+
+```rust,ignore
+use nice_plug_vizia::widgets::{ParamKnob, ParamKnobExt};
+
+ParamKnob::new(cx, &params.gain).class("gain-dial");
+// Optional for controls in scrollable containers:
+ParamKnob::new(cx, &params.mix).disable_scroll_wheel();
+```
+
+Vertical dragging adjusts the unmodulated value; Shift provides fine adjustment.
+The indicator follows host automation and modulation. Wheel and arrow keys use
+parameter-aware steps. Double-click, right-click, or command/control-click resets
+to default. Alt-click opens value entry using the parameter's own formatter and
+parser; Enter accepts, Escape cancels, and invalid input stays editable.
+Every edit emits matching host begin/change/end events. Value entry can be
+turned off with `.disable_text_entry()`.
+
+Style `param-knob` for size (80×80 by default), and its Vizia `knob`, `.knob-head`,
+`.knob-track`, and `.knob-tick` children for appearance. Hide the track and make
+the head transparent to overlay an existing background image. `.value-entry`
+styles the optional text field.
+
 ## Building Examples
 
 ```

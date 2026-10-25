@@ -18,6 +18,7 @@ use super::ViziaState;
 mod generic_ui;
 pub mod param_base;
 mod param_button;
+mod param_knob;
 pub mod param_registry;
 mod param_slider;
 mod peak_meter;
@@ -25,6 +26,7 @@ pub mod util;
 
 pub use generic_ui::GenericUi;
 pub use param_button::{ParamButton, ParamButtonExt};
+pub use param_knob::{ParamKnob, ParamKnobExt};
 pub use param_slider::{ParamSlider, ParamSliderExt, ParamSliderStyle};
 pub use peak_meter::PeakMeter;
 
