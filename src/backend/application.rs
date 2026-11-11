@@ -14,7 +14,7 @@ use vizia_core::backend::*;
 use vizia_core::events::EventManager;
 use vizia_core::prelude::*;
 
-use super::proxy::queue_get;
+use super::proxy::ProxyQueue;
 use super::window::create_surface;
 
 /// The state + event loop behind a vizia window. This is the ported core of
@@ -25,6 +25,7 @@ pub(crate) struct ApplicationRunner {
     pub window_context: WindowContext,
     pub gr_context: skia_safe::gpu::DirectContext,
     should_redraw: bool,
+    proxy_queue: ProxyQueue,
 
     /// The scale factor of the window itself, as reported by baseview. Used to
     /// convert logical coordinates to physical ones; for vizia the DPI factor
@@ -51,9 +52,11 @@ impl ApplicationRunner {
         window_description: WindowDescription,
         is_parented: bool,
         window_context: WindowContext,
+        proxy_queue: ProxyQueue,
     ) -> Self {
         ApplicationRunner {
             should_redraw: true,
+            proxy_queue,
             gr_context,
             event_manager: EventManager::new(),
             window_context,
@@ -125,9 +128,12 @@ impl ApplicationRunner {
         // Pick up effects enqueued by off-UI-thread `SyncSignal` writes.
         Runtime::drain_pending_work();
 
-        while let Some(event) = queue_get() {
+        for event in self.proxy_queue.take_events() {
             self.cx.send_event(event.into_event());
         }
+
+        self.cx.process_timers();
+        self.cx.emit_scheduled_events();
 
         // Events. The flush callback can't borrow `&mut self`, so size / scale
         // change requests get latched into locals here and applied afterwards.
@@ -142,6 +148,9 @@ impl ApplicationRunner {
                 }
                 WindowEvent::SetUserScale(factor) => {
                     pending_user_scale = Some(*factor);
+                }
+                WindowEvent::SetCursor(icon) => {
+                    let _ = self.window_context.set_mouse_cursor(translate_mouse_cursor(*icon));
                 }
                 _ => {}
             }
@@ -183,8 +192,10 @@ impl ApplicationRunner {
         if self.cx.0.windows.iter().any(|(_, window_state)| !window_state.redraw_list.is_empty()) {
             self.should_redraw = true;
         }
+    }
 
-        self.cx.process_timers();
+    pub fn mark_damaged(&mut self) {
+        self.should_redraw = true;
     }
 
     pub fn render(&mut self) {
@@ -275,6 +286,17 @@ impl ApplicationRunner {
                 }
                 MouseEvent::CursorLeft => {
                     self.cx.emit_origin(WindowEvent::MouseLeave);
+                }
+                MouseEvent::DragDropped { modifiers, data, .. } => {
+                    update_modifiers(modifiers);
+                    if let baseview::DropData::Files(files) = data {
+                        for file in files {
+                            self.cx.emit_window_event(
+                                Entity::root(),
+                                WindowEvent::Drop(DropData::File(file)),
+                            );
+                        }
+                    }
                 }
                 _ => {}
             },
@@ -415,5 +437,57 @@ fn translate_mouse_button(button: baseview::MouseButton) -> MouseButton {
         baseview::MouseButton::Forward => MouseButton::Forward,
         baseview::MouseButton::Other(id) => MouseButton::Other(id as u16),
         _ => MouseButton::Other(0),
+    }
+}
+
+#[cfg(test)]
+mod cursor_tests {
+    use super::*;
+
+    #[test]
+    fn translates_text_hidden_and_resize_cursors() {
+        assert!(matches!(translate_mouse_cursor(CursorIcon::Text), baseview::MouseCursor::Text));
+        assert!(matches!(translate_mouse_cursor(CursorIcon::None), baseview::MouseCursor::Hidden));
+        assert!(matches!(translate_mouse_cursor(CursorIcon::EwResize), baseview::MouseCursor::EwResize));
+    }
+}
+
+fn translate_mouse_cursor(icon: CursorIcon) -> baseview::MouseCursor {
+    match icon {
+        CursorIcon::Default | CursorIcon::Arrow => baseview::MouseCursor::Default,
+        CursorIcon::None => baseview::MouseCursor::Hidden,
+        CursorIcon::Cell => baseview::MouseCursor::Cell,
+        CursorIcon::Crosshair => baseview::MouseCursor::Crosshair,
+        CursorIcon::Text => baseview::MouseCursor::Text,
+        CursorIcon::VerticalText => baseview::MouseCursor::VerticalText,
+        CursorIcon::ContextMenu => baseview::MouseCursor::Default,
+        CursorIcon::Help => baseview::MouseCursor::Help,
+        CursorIcon::Hand => baseview::MouseCursor::Hand,
+        CursorIcon::Progress => baseview::MouseCursor::PtrWorking,
+        CursorIcon::Wait => baseview::MouseCursor::Working,
+        CursorIcon::Alias => baseview::MouseCursor::Alias,
+        CursorIcon::Copy => baseview::MouseCursor::Copy,
+        CursorIcon::Move => baseview::MouseCursor::Move,
+        CursorIcon::NoDrop => baseview::MouseCursor::NotAllowed,
+        CursorIcon::NotAllowed => baseview::MouseCursor::NotAllowed,
+        CursorIcon::Grab => baseview::MouseCursor::Hand,
+        CursorIcon::Grabbing => baseview::MouseCursor::HandGrabbing,
+        CursorIcon::ZoomIn => baseview::MouseCursor::ZoomIn,
+        CursorIcon::ZoomOut => baseview::MouseCursor::ZoomOut,
+        CursorIcon::NResize => baseview::MouseCursor::NResize,
+        CursorIcon::EResize => baseview::MouseCursor::EResize,
+        CursorIcon::SResize => baseview::MouseCursor::SResize,
+        CursorIcon::WResize => baseview::MouseCursor::WResize,
+        CursorIcon::NeResize => baseview::MouseCursor::NeResize,
+        CursorIcon::NwResize => baseview::MouseCursor::NwResize,
+        CursorIcon::SeResize => baseview::MouseCursor::SeResize,
+        CursorIcon::SwResize => baseview::MouseCursor::SwResize,
+        CursorIcon::EwResize => baseview::MouseCursor::EwResize,
+        CursorIcon::NsResize => baseview::MouseCursor::NsResize,
+        CursorIcon::NeswResize => baseview::MouseCursor::NeswResize,
+        CursorIcon::NwseResize => baseview::MouseCursor::NwseResize,
+        CursorIcon::AllScroll => baseview::MouseCursor::AllScroll,
+        CursorIcon::ColResize => baseview::MouseCursor::ColResize,
+        CursorIcon::RowResize => baseview::MouseCursor::RowResize,
     }
 }

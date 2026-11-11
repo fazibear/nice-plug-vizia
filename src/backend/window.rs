@@ -18,6 +18,7 @@ use vizia_core::backend::*;
 use vizia_core::prelude::*;
 
 use super::application::ApplicationRunner;
+use super::proxy::ProxyQueue;
 
 /// The baseview window handler for a vizia editor window. baseview invokes the
 /// handler methods through `&self`, so the inner vizia state lives behind a
@@ -45,6 +46,8 @@ impl ViziaWindowHandle {
         // writes correctly enqueue effects on `SYNC_RUNTIME`; the frame loop
         // later drains them via `Runtime::drain_pending_work`.
         Runtime::init_on_ui_thread();
+        let proxy_queue = ProxyQueue::default();
+        cx.set_event_proxy(Box::new(proxy_queue.proxy()));
 
         // Register a no-op sync waker. We keep the window redrawing at the
         // host compositor's frame rate, so signal changes from off-UI writes
@@ -129,6 +132,7 @@ impl ViziaWindowHandle {
             win_desc,
             is_parented,
             window,
+            proxy_queue,
         );
 
         // SAFETY: the GL context is current and only used from this thread.
@@ -141,6 +145,13 @@ impl ViziaWindowHandle {
 }
 
 impl WindowHandler for ViziaWindowHandle {
+    fn damage(&self, _area: baseview::DamageArea) {
+        Runtime::init_on_ui_thread();
+        if let Ok(mut application) = self.application.try_borrow_mut() {
+            application.mark_damaged();
+        }
+    }
+
     fn draw(&self) -> Result<(), baseview::HandlerError> {
         // Some hosts dispatch baseview callbacks from a different UI thread
         // than the one that constructed the window; make sure we're
@@ -150,12 +161,11 @@ impl WindowHandler for ViziaWindowHandle {
             return Ok(());
         };
 
-        application.on_frame_update();
-
         // Run the embedder's idle callback on every frame so work queued from
         // off-UI threads (e.g. a plugin host delivering keys/param changes on
         // the host thread) is drained even when host events are sparse.
         application.handle_idle(&self.on_idle);
+        application.on_frame_update();
 
         application.render();
 
@@ -188,10 +198,24 @@ impl WindowHandler for ViziaWindowHandle {
         let captured = matches!(event, BaseviewEvent::Keyboard(_))
             && application.focused_element() == Some("textbox");
 
+        let accepts_drop = matches!(
+            &event,
+            BaseviewEvent::Mouse(
+                baseview::MouseEvent::DragEntered { .. }
+                    | baseview::MouseEvent::DragMoved { .. }
+                    | baseview::MouseEvent::DragDropped { .. }
+            )
+        );
         application.handle_event(event);
         application.handle_idle(&self.on_idle);
 
-        if captured { EventStatus::Captured } else { EventStatus::Ignored }
+        if accepts_drop {
+            EventStatus::AcceptDrop(baseview::DropEffect::Copy)
+        } else if captured {
+            EventStatus::Captured
+        } else {
+            EventStatus::Ignored
+        }
     }
 }
 

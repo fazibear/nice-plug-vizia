@@ -1,8 +1,8 @@
 [package]
 name = "nice-plug-vizia"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
-authors = ["George Atkinson <geom3trik@vizia.dev>"]
+authors = ["George Atkinson <geom3trik@vizia.dev>", "Michał Kalbarczyk <fazibear@gmail.com>"]
 license = "MIT"
 description = "An adapter to use VIZIA GUIs with nice-plug"
 

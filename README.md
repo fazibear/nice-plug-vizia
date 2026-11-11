@@ -6,7 +6,7 @@ This crate allows for the use of the Vizia GUI library with the [nice-plug](http
 
 ## Backend
 
-Unlike the upstream `vizia_baseview` (which is coupled to baseview 0.2.x and a git-fork of baseview), this crate:
+Like upstream `vizia_baseview`, this crate uses published baseview 0.4.x. It keeps a local backend for nice-plug integration:
 
 - Merges the `vizia_baseview` windowing/rendering backend in as `src/backend/`, split into the same modules (`proxy`, `application`, `window`).
 - Drives vizia from the **main published [`baseview`](https://crates.io/crates/baseview) 0.4.x** directly, so `EditorHandle::Window` is a real `baseview::Window` exposing the window-control API nice-plug needs.

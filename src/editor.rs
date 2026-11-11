@@ -102,7 +102,7 @@ impl Editor for ViziaEditor {
         let emit_parameters_changed_event = self.emit_parameters_changed_event.clone();
         let key_inject = self.key_inject.clone();
 
-        // Runs every frame on the GUI thread after events have been handled:
+        // Runs every frame on the GUI thread before events are handled:
         // emits `ParametersChanged` when the host reported a value change, and
         // drains keys queued by the host-thread virtual-key callback.
         let on_idle: Box<dyn Fn(&mut Context) + Send> = Box::new(move |cx| {
@@ -243,8 +243,7 @@ impl Editor for ViziaEditor {
                 cx.ignore_default_theme = theming == ViziaTheming::None;
                 cx.add_built_in_styles();
 
-                let mut cx = vizia::backend::BackendContext::new(cx);
-                cx.set_event_proxy(Box::new(backend::BaseviewProxy));
+                let cx = vizia::backend::BackendContext::new(cx);
                 backend::ViziaWindowHandle::new(
                     cx,
                     win_desc,

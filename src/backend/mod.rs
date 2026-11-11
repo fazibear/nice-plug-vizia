@@ -8,9 +8,9 @@
 //! - [`application`] — the reactive frame loop and baseview→vizia event
 //!   translation (the ported `ApplicationRunner`).
 //!
-//! The upstream `vizia_baseview` is tied to baseview 0.2.x's different handler
-//! model (`on_frame`) and its own git-fork of baseview; we instead drive vizia
-//! from the **main published `baseview` (0.4.x)** directly so the editor's
+//! Like upstream `vizia_baseview`, we use published baseview 0.4.x. We keep
+//! this backend local to integrate nice-plug's host callbacks and continuous
+//! parameter/key polling, while exposing the editor's
 //! `EditorHandle::Window` can be a real `baseview::Window` exposing the
 //! window-control API nice-plug needs.
 
@@ -18,5 +18,4 @@ mod application;
 mod proxy;
 mod window;
 
-pub(crate) use proxy::BaseviewProxy;
 pub(crate) use window::ViziaWindowHandle;
