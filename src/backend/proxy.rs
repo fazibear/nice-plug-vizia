@@ -2,8 +2,8 @@
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, Weak};
-use vizia_core::context::EventProxy;
-use vizia_core::events::ProxyEvent;
+use vizia::context::EventProxy;
+use vizia::events::ProxyEvent;
 
 #[derive(Default)]
 pub(crate) struct ProxyQueue(Arc<Mutex<VecDeque<ProxyEvent>>>);

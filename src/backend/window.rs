@@ -9,13 +9,14 @@ use baseview::{
     Event as BaseviewEvent, EventStatus, WindowContext, WindowHandler, WindowSize,
 };
 use gl::types::GLint;
+use vizia::vg as skia_safe;
 use skia_safe::gpu::gl::FramebufferInfo;
 use skia_safe::gpu::{
     self, ContextOptions, SurfaceOrigin, backend_render_targets, ganesh::context_options,
 };
 use skia_safe::{ColorSpace, ColorType, PixelGeometry, Surface, SurfaceProps, SurfacePropsFlags};
-use vizia_core::backend::*;
-use vizia_core::prelude::*;
+use vizia::backend::*;
+use vizia::prelude::*;
 
 use super::application::ApplicationRunner;
 use super::proxy::ProxyQueue;

@@ -9,10 +9,11 @@
 use baseview::{Event as BaseviewEvent, MouseEvent, ScrollDelta, WindowContext, WindowSize};
 use gl::types::GLint;
 use keyboard_types::{KeyState, Modifiers as InputModifiers};
+use vizia::vg as skia_safe;
 use skia_safe::gpu::gl::FramebufferInfo;
-use vizia_core::backend::*;
-use vizia_core::events::EventManager;
-use vizia_core::prelude::*;
+use vizia::backend::*;
+use vizia::events::EventManager;
+use vizia::prelude::*;
 
 use super::proxy::ProxyQueue;
 use super::window::create_surface;
